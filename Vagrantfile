@@ -121,6 +121,32 @@ Vagrant.configure(2) do |config|
         
         service bacula-dir start
         service bacula-fd start
+        
+        # instalação conforme tutorial <http://www.bacula.lat/instalacao-webacula-5-x-gui-web/>
+        
+        apt-get install apache2 php7.0 libapache2-mod-php php7.0-pgsql php-gd 
+        
+        mkdir /var/www
+        wget -qO- https://ufpr.dl.sourceforge.net/project/webacula/webacula/5.5.1/webacula-5.5.1.tar.gz |  tar -xvzf - -C /var/www
+        mv /var/www/webacula-5.5.1 /var/www/webacula
+        
+        wget -qO- https://packages.zendframework.com/releases/ZendFramework-1.11.5/ZendFramework-1.11.5.tar.gz | tar -xvzf - -C /tmp
+        cp -r /tmp/ZendFramework-1.11.5/library/ /var/www/webacula/
+        
+        # edit /var/www/webacula/install/db.conf
+        
+        su -c "cd /var/www/webacula/install/PostgreSql; ./10_make_tables.sh" - postgres
+        su -c "cd /var/www/webacula/install/PostgreSql; ./20_acl_make_tables.sh" - postgres
+        
+        service bacula-dir restart
+        
+        # edit /etc/php/7.0/apache2/php.ini
+        
+        cp /var/www/webacula/install/apache/webacula.conf /etc/apache2/conf-available/
+        sed -i 's/^\/Directory>/<\/Directory>/' /etc/apache2/conf-enabled/webacula.conf
+        a2enconf webacula
+        a2enmod rewrite
+        systemctl reload apache2
       SHELL
   end
   
