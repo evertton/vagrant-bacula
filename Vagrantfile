@@ -9,11 +9,10 @@ Vagrant.configure(2) do |config|
 
   config.vm.provision "shell", inline: <<-SHELL
     set -x
-    apt update -y && apt upgrade -y
-    apt install -y nano build-essential
+    apt-get update -y && apt upgrade -y
+    apt-get install -y nano build-essential
     
     wget -qO- https://master.dl.sourceforge.net/project/bacula/bacula/7.0.5/bacula-7.0.5.tar.gz | tar -xvzf - -C /usr/src
-    cd /usr/src/bacula-7.0.5
   SHELL
     
 #  config.vm.define "nfs", primary: true do |s|
@@ -28,8 +27,9 @@ Vagrant.configure(2) do |config|
       s.vm.hostname = "bacula-sd"
       s.vm.network "private_network", ip: "192.168.111.10"
       s.vm.provision "shell", inline: <<-SHELL
-        apt install -y sqlite3 libsqlite3-dev
+        apt-get install -y sqlite3 libsqlite3-dev
         
+        cd /usr/src/bacula-7.0.5
         CFLAGS="-g -Wall" \
         ./configure \
             --bindir=/sbin \
@@ -74,8 +74,9 @@ Vagrant.configure(2) do |config|
       s.vm.hostname = "bacula-dir"
       s.vm.network "private_network", ip: "192.168.111.11"
       s.vm.provision "shell", inline: <<-SHELL
-        apt install -y postgresql libpq-dev
+        apt-get install -y postgresql libpq-dev
       
+        cd /usr/src/bacula-7.0.5
         CFLAGS="-g -Wall" \
         ./configure \
             --bindir=/sbin \
@@ -130,6 +131,7 @@ Vagrant.configure(2) do |config|
       s.vm.hostname = "bacula-fd1"
       s.vm.network "private_network", ip: "192.168.111.12"
       s.vm.provision "shell", inline: <<-SHELL
+        cd /usr/src/bacula-7.0.5
         CFLAGS="-g -Wall" \
         ./configure \
             --bindir=/sbin \
@@ -162,6 +164,7 @@ Vagrant.configure(2) do |config|
       s.vm.hostname = "bacula-fd2"
       s.vm.network "private_network", ip: "192.168.111.13"
       s.vm.provision "shell", inline: <<-SHELL
+        cd /usr/src/bacula-7.0.5
         CFLAGS="-g -Wall" \
         ./configure \
             --bindir=/sbin \
