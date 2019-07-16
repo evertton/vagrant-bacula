@@ -113,12 +113,9 @@ Vagrant.configure(2) do |config|
         cp /etc/bacula/grant_postgresql_privileges /tmp/bacula/grant_postgresql_privileges
         chown -R postgres:postgres /tmp/bacula
         
-        su - postgres
-          cd /tmp/bacula
-          ./create_postgresql_database
-          ./make_postgresql_tables
-          ./grant_postgresql_privileges
-        exit
+        su -c "/tmp/bacula/create_postgresql_database" -s /bin/sh postgres
+        su -c "/tmp/bacula/make_postgresql_tables" -s /bin/sh postgres
+        su -c "/tmp/bacula/grant_postgresql_privileges" -s /bin/sh postgres
         
         mkdir /opt/bacula/log
         
