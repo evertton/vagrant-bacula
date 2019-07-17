@@ -124,7 +124,7 @@ Vagrant.configure(2) do |config|
         
         # instalação conforme tutorial <http://www.bacula.lat/instalacao-webacula-5-x-gui-web/>
         
-        apt-get install apache2 php7.0 libapache2-mod-php php7.0-pgsql php-gd 
+        apt-get install -y apache2 php7.0 libapache2-mod-php php7.0-pgsql php-gd 
         
         mkdir /var/www
         wget -qO- https://ufpr.dl.sourceforge.net/project/webacula/webacula/5.5.1/webacula-5.5.1.tar.gz |  tar -xvzf - -C /var/www
@@ -133,20 +133,41 @@ Vagrant.configure(2) do |config|
         wget -qO- https://packages.zendframework.com/releases/ZendFramework-1.11.5/ZendFramework-1.11.5.tar.gz | tar -xvzf - -C /tmp
         cp -r /tmp/ZendFramework-1.11.5/library/ /var/www/webacula/
         
-        # edit /var/www/webacula/install/db.conf
+        sed -i 's/db_user=\"root\"/db_user=\"bacula\"/' /var/www/webacula/install/db.conf
+        sed -i 's/, 12);/, 14);/' /var/www/webacula/html/index.php
         
         su -c "cd /var/www/webacula/install/PostgreSql; ./10_make_tables.sh" - postgres
         su -c "cd /var/www/webacula/install/PostgreSql; ./20_acl_make_tables.sh" - postgres
         
+        sed -i 's/catalog = all/catalog = all, !skipped, !saved/' /etc/bacula/bacula-dir.conf
+        
         service bacula-dir restart
         
-        # edit /etc/php/7.0/apache2/php.ini
-        
+        sed -i 's/memory_limit = 128M/memory_limit = 32M/' /etc/php/7.0/apache2/php.ini
+        sed -i 's/max_execution_time = 30/max_execution_time = 3600/' /etc/php/7.0/apache2/php.ini
+                
         cp /var/www/webacula/install/apache/webacula.conf /etc/apache2/conf-available/
-        sed -i 's/^\/Directory>/<\/Directory>/' /etc/apache2/conf-enabled/webacula.conf
-        a2enconf webacula
+        
+        sed -i 's|/usr/share/webacula|/var/www/webacula|' /etc/apache2/conf-available/webacula.conf
+        sed -i 's|^/Directory>|<\/Directory>|' /etc/apache2/conf-available/webacula.conf
+        sed -i 's|   # Allow from <your network>|   Allow from 192.168.111.0/24|' /etc/apache2/conf-available/webacula.conf
+        
         a2enmod rewrite
-        systemctl reload apache2
+        a2enconf webacula
+        
+        systemctl restart apache2
+        
+        chown -R www-data. /var/www/webacula
+        
+        sed -i 's|db.adapter = PDO_MYSQL|db.adapter = PDO_PGSQL|' /var/www/webacula/application/config.ini
+        sed -i 's|db.config.username = root|db.config.username = bacula|' /var/www/webacula/application/config.ini
+        sed -i 's|def.timezone = "Europe/Minsk"|def.timezone = "America/Maceio"|' /var/www/webacula/application/config.ini
+        sed -i 's|bacula.sudo = "/usr/bin/sudo"|bacula.sudo = ""|' /var/www/webacula/application/config.ini
+        
+        chown www-data /sbin/bconsole
+        chmod u=rwx,g=rx,o= /sbin/bconsole
+        chown www-data /etc/bacula/bconsole.conf
+        chmod u=rw,g=r,o= /etc/bacula/bconsole.conf
       SHELL
   end
   
