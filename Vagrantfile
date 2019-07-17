@@ -93,6 +93,7 @@ Vagrant.configure(2) do |config|
             --with-postgresql \
             --with-db-name=bacula \
             --with-db-user=bacula \
+            --with-db-password=bacula \
             --with-job-email=root@localhost \
             --with-smtp-host=localhost \
             --disable-conio \
@@ -111,6 +112,7 @@ Vagrant.configure(2) do |config|
         cp /etc/bacula/create_postgresql_database /tmp/bacula/create_postgresql_database
         cp /etc/bacula/make_postgresql_tables /tmp/bacula/make_postgresql_tables
         cp /etc/bacula/grant_postgresql_privileges /tmp/bacula/grant_postgresql_privileges
+        sed -i 's/db_password=/db_password=bacula/' /tmp/bacula/grant_postgresql_privileges
         chown -R postgres:postgres /tmp/bacula
         
         su -c "/tmp/bacula/create_postgresql_database" -s /bin/sh postgres
@@ -119,6 +121,10 @@ Vagrant.configure(2) do |config|
         
         mkdir /opt/bacula/log
         
+        sed -i 's/local   all             all                                     peer/local   all             all                                     md5/' /etc/postgresql/9.6/main/pg_hba.conf
+        sudo -u postgres psql -c "ALTER USER bacula WITH PASSWORD 'bacula'" bacula
+        
+        service postgresql restart
         service bacula-dir start
         service bacula-fd start
         
@@ -161,6 +167,7 @@ Vagrant.configure(2) do |config|
         
         sed -i 's|db.adapter = PDO_MYSQL|db.adapter = PDO_PGSQL|' /var/www/webacula/application/config.ini
         sed -i 's|db.config.username = root|db.config.username = bacula|' /var/www/webacula/application/config.ini
+        sed -i 's|db.config.password =|db.config.password = bacula|' /var/www/webacula/application/config.ini
         sed -i 's|def.timezone = "Europe/Minsk"|def.timezone = "America/Maceio"|' /var/www/webacula/application/config.ini
         sed -i 's|bacula.sudo = "/usr/bin/sudo"|bacula.sudo = ""|' /var/www/webacula/application/config.ini
         
