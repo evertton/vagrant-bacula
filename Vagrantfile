@@ -11,7 +11,7 @@ Vagrant.configure(2) do |config|
     set -x
     apt-get update -y && apt upgrade -y
     apt-get install -y nano build-essential
-    
+
     wget -qO- https://master.dl.sourceforge.net/project/bacula/bacula/7.0.5/bacula-7.0.5.tar.gz | tar -xvzf - -C /usr/src
   SHELL
     
@@ -22,13 +22,13 @@ Vagrant.configure(2) do |config|
 #        
 #      SHELL
 #  end
-  
+
   config.vm.define "sd", primary: true do |s|
       s.vm.hostname = "bacula-sd"
       s.vm.network "private_network", ip: "192.168.111.10"
       s.vm.provision "shell", inline: <<-SHELL
         apt-get install -y sqlite3 libsqlite3-dev
-        
+
         cd /usr/src/bacula-7.0.5
         CFLAGS="-g -Wall" \
         ./configure \
@@ -55,16 +55,16 @@ Vagrant.configure(2) do |config|
             --disable-acl \
             --enable-xattr \
             --enable-batch-insert
-        
+
         make install
         make install-autostart-sd
         make install-autostart-fd
-        
+
         cd /etc/bacula
         ./create_sqlite3_database
         ./make_sqlite3_tables
         ./grant_sqlite3_privileges
-        
+
         service bacula-sd start
         service bacula-fd start
       SHELL
@@ -75,7 +75,7 @@ Vagrant.configure(2) do |config|
       s.vm.network "private_network", ip: "192.168.111.11"
       s.vm.provision "shell", inline: <<-SHELL
         apt-get install -y postgresql libpq-dev
-      
+
         cd /usr/src/bacula-7.0.5
         CFLAGS="-g -Wall" \
         ./configure \
@@ -144,6 +144,8 @@ Vagrant.configure(2) do |config|
         
         su -c "cd /var/www/webacula/install/PostgreSql; ./10_make_tables.sh" - postgres
         su -c "cd /var/www/webacula/install/PostgreSql; ./20_acl_make_tables.sh" - postgres
+        sudo -u postgres psql -c "grant all privileges on all tables in schema public to bacula;" bacula
+	sudo -u postgres psql -c "update webacula_users set pwd = MD5('root') where login = 'root';" bacula
         
         sed -i 's/catalog = all/catalog = all, !skipped, !saved/' /etc/bacula/bacula-dir.conf
         
@@ -151,7 +153,7 @@ Vagrant.configure(2) do |config|
         
         sed -i 's/memory_limit = 128M/memory_limit = 32M/' /etc/php/7.0/apache2/php.ini
         sed -i 's/max_execution_time = 30/max_execution_time = 3600/' /etc/php/7.0/apache2/php.ini
-                
+
         cp /var/www/webacula/install/apache/webacula.conf /etc/apache2/conf-available/
         
         sed -i 's|/usr/share/webacula|/var/www/webacula|' /etc/apache2/conf-available/webacula.conf
@@ -175,6 +177,7 @@ Vagrant.configure(2) do |config|
         chmod u=rwx,g=rx,o= /sbin/bconsole
         chown www-data /etc/bacula/bconsole.conf
         chmod u=rw,g=r,o= /etc/bacula/bconsole.conf
+        chmod u=rwx,g=rwx,o=x /etc/bacula
       SHELL
   end
   
