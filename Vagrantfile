@@ -13,6 +13,13 @@ Vagrant.configure(2) do |config|
     apt-get install -y nano build-essential
 
     wget -qO- https://master.dl.sourceforge.net/project/bacula/bacula/7.0.5/bacula-7.0.5.tar.gz | tar -xvzf - -C /usr/src
+
+    printf "\n# Endereços do ambiente Bacula\n" >> /etc/hosts
+    printf "192.168.111.9\tbacula-nfs\n" >> /etc/hosts
+    printf "192.168.111.10\tbacula-sd\n" >> /etc/hosts
+    printf "192.168.111.11\tbacula-dir\n" >> /etc/hosts
+    printf "192.168.111.12\tbacula-fd1\n" >> /etc/hosts
+    printf "192.168.111.13\tbacula-fd2\n" >> /etc/hosts
   SHELL
     
 #  config.vm.define "nfs", primary: true do |s|
