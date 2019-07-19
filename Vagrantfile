@@ -151,8 +151,9 @@ Vagrant.configure(2) do |config|
         
         su -c "cd /var/www/webacula/install/PostgreSql; ./10_make_tables.sh" - postgres
         su -c "cd /var/www/webacula/install/PostgreSql; ./20_acl_make_tables.sh" - postgres
-        sudo -u postgres psql -c "grant all privileges on all tables in schema public to bacula;" bacula
-	sudo -u postgres psql -c "update webacula_users set pwd = MD5('root') where login = 'root';" bacula
+        sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO bacula;" bacula
+        sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO bacula;" bacula
+        sudo -u postgres psql -c "UPDATE webacula_users SET PWD = MD5('root') WHERE login = 'root';" bacula
         
         sed -i 's/catalog = all/catalog = all, !skipped, !saved/' /etc/bacula/bacula-dir.conf
         
