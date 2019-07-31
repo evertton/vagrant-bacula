@@ -16,7 +16,7 @@ Vagrant.configure(2) do |config|
     apt-get update -y && apt upgrade -y
     apt-get install -y nano build-essential
 
-    wget -qO- https://master.dl.sourceforge.net/project/bacula/bacula/7.0.5/bacula-7.0.5.tar.gz | tar -xvzf - -C /usr/src
+    wget -qO- https://ufpr.dl.sourceforge.net/project/bacula/bacula/9.4.4/bacula-9.4.4.tar.gz | tar -xvzf - -C /usr/src
 
     printf "\n# Endereços do ambiente Bacula\n" >> /etc/hosts
     printf "192.168.111.9\tbacula-nfs\n" >> /etc/hosts
@@ -40,7 +40,7 @@ Vagrant.configure(2) do |config|
       s.vm.provision "shell", inline: <<-SHELL
         apt-get install -y sqlite3 libsqlite3-dev
 
-        cd /usr/src/bacula-7.0.5
+        cd /usr/src/bacula-9.4.4
         CFLAGS="-g -Wall" \
         ./configure \
             --bindir=/sbin \
@@ -87,7 +87,7 @@ Vagrant.configure(2) do |config|
       s.vm.provision "shell", inline: <<-SHELL
         apt-get install -y postgresql libpq-dev
 
-        cd /usr/src/bacula-7.0.5
+        cd /usr/src/bacula-9.4.4
         CFLAGS="-g -Wall" \
         ./configure \
             --bindir=/sbin \
@@ -139,19 +139,11 @@ Vagrant.configure(2) do |config|
         service bacula-dir start
         service bacula-fd start
         
-        # instalação conforme tutorial <http://www.bacula.lat/instalacao-webacula-5-x-gui-web/>
-        
-        apt-get install -y apache2 php7.0 libapache2-mod-php php7.0-pgsql php-gd 
+        apt-get install -y apache2 php7.0 libapache2-mod-php php7.0-pgsql php-gd
         
         mkdir /var/www
-        wget -qO- https://ufpr.dl.sourceforge.net/project/webacula/webacula/5.5.1/webacula-5.5.1.tar.gz |  tar -xvzf - -C /var/www
-        mv /var/www/webacula-5.5.1 /var/www/webacula
-        
-        wget -qO- https://packages.zendframework.com/releases/ZendFramework-1.11.5/ZendFramework-1.11.5.tar.gz | tar -xvzf - -C /tmp
-        cp -r /tmp/ZendFramework-1.11.5/library/ /var/www/webacula/
-        
-        sed -i 's/db_user=\"root\"/db_user=\"bacula\"/' /var/www/webacula/install/db.conf
-        sed -i 's/, 12);/, 14);/' /var/www/webacula/html/index.php
+        wget -qO- https://github.com/wanderleihuttel/webacula/archive/7.5.4.tar.gz |  tar -xvzf - -C /var/www
+        mv /var/www/webacula-7.5.4 /var/www/webacula
         
         su -c "cd /var/www/webacula/install/PostgreSql; ./10_make_tables.sh" - postgres
         su -c "cd /var/www/webacula/install/PostgreSql; ./20_acl_make_tables.sh" - postgres
@@ -163,9 +155,13 @@ Vagrant.configure(2) do |config|
         
         service bacula-dir restart
         
+        sed -i 's|def.timezone = "America/Sao Paulo"|def.timezone = "America/Maceio"|' /var/www/webacula/application/config.ini
+        sed -i 's|bacula.sudo        = "/usr/bin/sudo"|bacula.sudo        = ""|' /var/www/webacula/application/config.ini
+        sed -i 's|bacula.bconsole    = "/usr/sbin/bconsole"|bacula.bconsole    = "/sbin/bconsole"|' /var/www/webacula/application/config.ini
+        
         sed -i 's/memory_limit = 128M/memory_limit = 32M/' /etc/php/7.0/apache2/php.ini
         sed -i 's/max_execution_time = 30/max_execution_time = 3600/' /etc/php/7.0/apache2/php.ini
-
+        
         cp /var/www/webacula/install/apache/webacula.conf /etc/apache2/conf-available/
         
         sed -i 's|/usr/share/webacula|/var/www/webacula|' /etc/apache2/conf-available/webacula.conf
@@ -178,15 +174,11 @@ Vagrant.configure(2) do |config|
         systemctl restart apache2
         
         chown -R www-data. /var/www/webacula
+        mkdir -p /var/www/webacula/data/cache
+        chmod 777 /var/www/webacula/data/cache
         
-        sed -i 's|db.adapter = PDO_MYSQL|db.adapter = PDO_PGSQL|' /var/www/webacula/application/config.ini
-        sed -i 's|db.config.username = root|db.config.username = bacula|' /var/www/webacula/application/config.ini
-        sed -i 's|db.config.password =|db.config.password = bacula|' /var/www/webacula/application/config.ini
-        sed -i 's|def.timezone = "Europe/Minsk"|def.timezone = "America/Maceio"|' /var/www/webacula/application/config.ini
-        sed -i 's|bacula.sudo = "/usr/bin/sudo"|bacula.sudo = ""|' /var/www/webacula/application/config.ini
+        sudo -u postgres psql -c "update webacula_users set pwd='$(cd /var/www/webacula/install/; php password-to-hash.php bacula)' where id=1000;" bacula
         
-        chown www-data /sbin/bconsole
-        chmod u=rwx,g=rx,o= /sbin/bconsole
         chown www-data /etc/bacula/bconsole.conf
         chmod u=rw,g=r,o= /etc/bacula/bconsole.conf
         chmod u=rwx,g=rwx,o=x /etc/bacula
@@ -197,7 +189,7 @@ Vagrant.configure(2) do |config|
       s.vm.hostname = "bacula-fd1"
       s.vm.network "private_network", ip: "192.168.111.12"
       s.vm.provision "shell", inline: <<-SHELL
-        cd /usr/src/bacula-7.0.5
+        cd /usr/src/bacula-9.4.4
         CFLAGS="-g -Wall" \
         ./configure \
             --bindir=/sbin \
@@ -230,7 +222,7 @@ Vagrant.configure(2) do |config|
       s.vm.hostname = "bacula-fd2"
       s.vm.network "private_network", ip: "192.168.111.13"
       s.vm.provision "shell", inline: <<-SHELL
-        cd /usr/src/bacula-7.0.5
+        cd /usr/src/bacula-9.4.4
         CFLAGS="-g -Wall" \
         ./configure \
             --bindir=/sbin \
